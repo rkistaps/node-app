@@ -1,4 +1,6 @@
-var Order = require('./../models/Order');
+const Order = require('./../models/Order');
+const UserModel = require('./../models/User');
+const functions = require('./../functions');
 
 var OrderController = {
 

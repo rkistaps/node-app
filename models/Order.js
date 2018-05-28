@@ -1,6 +1,8 @@
-var db = require('./../components/DB');
-var User = require('./User');
-var Mode = require('./Mode');
+const db = require('./../components/DB')
+const User = require('./User')
+const Mode = require('./Mode')
+const functions = require('./../functions')
+const debounce = require('debounce');
 
 var Order = {
 
@@ -55,23 +57,47 @@ var Order = {
     getAllData: function(group, id, callback)
     {
 
-        this.get(group, id, function(group){
+        var debounce = require('debounce');
+        var self = this;
 
-            Mode.getReason(group.modeReason, function(result){
+        this.get(group, id, function(order){
 
-                group.reason = result;
-                Mode.getStatus(group.modeStatus, function(result){
+            Mode.getReason(order.modeReason, function(result){
 
-                    group.status = result;
-                    Mode.getType(group.modeType, function(result){
+                order.reason = result
+                Mode.getStatus(order.modeStatus, function(result){
 
-                        group.type = result
+                    order.status = result
+                    Mode.getType(order.modeType, function(result){
 
-                        User.get(group.createdBy, function(result){
+                        order.type = result
 
-                            group.user = result;
-                            callback(group); // returning result
+                        User.get(order.createdBy, function(result){
 
+                            order.user = result
+                            var debounced = debounce(function(){
+                                // console.log('calling callback')
+                                callback(order);
+                            }, 250) // wait 250 after new result
+
+                            if(order.notifications){
+
+                                order.notification_users= {}
+                                
+                                for(var i in order.notifications){
+
+                                    User.get(i, function(user, uid){
+                                        
+                                        // console.log('debounce')
+                                        debounced() // new result
+                                        order.notification_users[uid] = user
+                                        
+                                    }) 
+        
+                                }
+            
+                            } 
+                            
                         });
 
                     })

@@ -14,14 +14,7 @@ var User = {
             if(typeof callback == 'function'){
 
                 var content = snapshot.val();
-                // here we hack, cuz db structure is wrong
-                // we need to find only Ukey and return lower level
-                if(content){
-                    //var key = functions.getKey(content)
-                    //content = content.key;
-                }
-
-                callback(content);
+                callback(content, uid);
 
             }
         });
