@@ -2,7 +2,6 @@ const db = require('./../components/DB')
 const User = require('./User')
 const Mode = require('./Mode')
 const functions = require('./../functions')
-const debounce = require('debounce');
 
 var Order = {
 
@@ -75,27 +74,18 @@ var Order = {
                         User.get(order.createdBy, function(result){
 
                             order.user = result
-                            var debounced = debounce(function(){
-                                // console.log('calling callback')
-                                callback(order);
-                            }, 250) // wait 250 after new result
 
                             if(order.notifications){
 
-                                order.notification_users= {}
-                                
-                                for(var i in order.notifications){
+                                User.getByIds(Object.keys(order.notifications), function(users){
 
-                                    User.get(i, function(user, uid){
-                                        
-                                        // console.log('debounce')
-                                        debounced() // new result
-                                        order.notification_users[uid] = user
-                                        
-                                    }) 
-        
-                                }
-            
+                                    order.notification_users = users
+                                    callback(order);
+
+                                });
+                               
+                            }else{
+                                debounced()
                             } 
                             
                         });
