@@ -4,6 +4,7 @@ var Message = require('./../models/Message');
 var Order = require('./../models/Order');
 var User = require('./../models/User');
 var db = require('./DB');
+var Mail = require('./Mail');
 
 module.exports = {
 
@@ -35,16 +36,20 @@ module.exports = {
 
                         message_snapshot.ref.update({sentToChat: true}); // register as sent
 
+                        var emit_sockets = [];
                         // sending to chat group sockets
                         for(var i in App.chatSockets){
 
-                            var socket = App.chatSockets[i];
+                            var socket = App.chatSockets[i]; 
                             if(socket.chatData && socket.chatData.group_id == group_id){ // thats my group
 
+                                emit_sockets.push(socket)
                                 User.get(message.createdBy, function(user_data){
 
                                     var key = functions.getKey(user_data);
                                     user = user_data[key];
+
+                                    var emit_socket = emit_sockets.pop();
 
                                     var emit_data = {
                                         group_id: group_id,
@@ -57,7 +62,7 @@ module.exports = {
 
                                     App.log("New message emit data: " + JSON.stringify(emit_data));
 
-                                    socket.emit('new_message', emit_data);
+                                    emit_socket.emit('new_message', emit_data);
 
                                 });
 
@@ -81,17 +86,56 @@ module.exports = {
     listenOrders: function()
     {
 
+        var self = this;
+
         OrderRef = db.instance.ref(Order.path);
         OrderRef.on('child_added', function(childSnapshot, group_id) {
 
             var order = childSnapshot.val();
 
-            if(!order.sosSent && order.modeReason == 1){ // SOS reason
-                App.log('SOS not sent');
+            if(/*1 || */(!order.sosSent && order.modeReason == 1)){ // SOS reason
+            
+                User.get(App.config.sos_user, function(user_data){
+
+                    if(user_data){
+
+                        var key = functions.getKey(user_data)
+                        var user = user_data[key]
+                        var from = App.config.mail.from
+
+                        user.email = 'ktaube@datateks.lv' // testing
+                        
+                        var sosmail = self.createSOSMail(order, user_data) 
+
+                        Mail.send(from, user.email, sosmail.subject, sosmail.content, function(sent, result){
+
+                            if(sent){
+                                App.log('SOS SENT: ' + JSON.stringify(result));
+                            }else{
+                                App.log('SOS NOT SENT: ' + JSON.stringify(result));
+                            }
+
+                        })
+
+                    }
+
+                })
+             
             }
 
         });
 
+    },
+
+    createSOSMail: function(order, user){
+
+        var subject = 'Jauns SOS'
+        var content = 'Jauns SOS'
+        
+        //content = App.config.web_app
+
+
+        return {subject: subject, content: content}
     }
 
 

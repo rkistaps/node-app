@@ -1,9 +1,13 @@
-config = {
+module.exports = {
     api: {
         port: 8888,
     },
     socket: {
         port: 8887,
+    },
+    web_app: {
+        protocol: 'http',
+        host: 'sos.local',
     },
     firebase: {
         key_location: __dirname + '/' + 'firebase-credentials.json',
@@ -27,5 +31,3 @@ config = {
     },
     sos_user: 'BCZm8JdA3ZRarLuM5ngFHEp0LaO2' // 112 user id
 }
-
-module.exports = config;
