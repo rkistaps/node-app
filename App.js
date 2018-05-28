@@ -78,16 +78,25 @@ module.exports = {
             // this is a chat socket
             socket.on('setChatData', function(data){
 
-                if(typeof data.group_id != 'undefined'){ // this should always be present
+                if(socket.user_id){ // if im authorized
 
-                    socket.chatData = data;
-                    self.chatSockets[socket.id] = socket;
-                    self.log('Chat socket id: ' + socket.id);
+                    if(typeof data.group_id != 'undefined'){ // this should always be present
 
+                        socket.chatData = data;
+                        self.chatSockets[socket.id] = socket;
+                        self.log('Chat socket id: ' + socket.id);
+    
+                    }else{
+    
+                        self.log("Incorrect chatData received: " + JSON.stringify(data));
+                        socket.emit('socket_error', 'Incorrect chatData received');
+    
+                    }
+                    
                 }else{
-
-                    self.log("Incorrect chatData received: " + JSON.stringify(data));
-                    socket.emit('socket_error', 'Incorrect chatData received');
+    
+                    self.log("Unauthorized socket sent chat data: " + JSON.stringify(data));
+                    socket.emit('socket_error', 'Unauthorized socket');
 
                 }
 
