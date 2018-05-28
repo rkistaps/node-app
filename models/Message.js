@@ -8,37 +8,25 @@ var Message = {
     getByGroupAndOrder: function(group, order, callback)
     {
 
-        /*var ref = db.instance.ref(this.path + "/" + group + "/" + order);
-
-        ref.once('value', function(snap){
-
-            snap.forEach(function(item){
-
-            });
-
-            console.log('here');
-
-            ref.off();
-
-        });*/
+        var ref = db.instance.ref(this.path + "/" + group + "/" + order);
 
         ref.once("value", function(snapshot) {
 
-            var result = snapshot.val();
-            var length = Object.keys(result).length;
-            var counter = 0;
+            var result = snapshot.val()
+            var length = Object.keys(result).length
+            var counter = 0
 
-            userRef = [];
-            var j = 0;
+            var users = {}
+
             for(var i in result){
 
-                userRef[++j] = db.instance.ref(User.path + "/").child(result[i].createdBy);
-                userRef[j].once('value', function(user_snap){
+                userRef = db.instance.ref(User.path + "/").child(result[i].createdBy);
+                userRef.once('value', function(user_snap){
 
-                    result[i].user = user_snap.val();
+                    users[user_snap.key] = user_snap.val();
 
-                    if(counter == length){ // this was last one
-                        callback(result);
+                    if(++counter == length){ // this was last one
+                        callback({messages: result, users: users});
                     }
 
                 });
@@ -46,6 +34,10 @@ var Message = {
             }
 
         });
+
+    },
+
+    loadMessageUsers: function(messages, callback){
 
     }
 

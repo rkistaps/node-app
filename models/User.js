@@ -10,7 +10,7 @@ var User = {
 
         var ref = db.instance.ref(this.path + "/" + uid);
 
-        ref.on("value", function(snapshot) {
+        ref.once("value", function(snapshot) {
             if(typeof callback == 'function'){
 
                 var content = snapshot.val();
