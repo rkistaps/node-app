@@ -23,8 +23,6 @@ var User = {
 
     getByIds(ids, callback){
 
-        console.log(ids)
-
         var self = this
         var result = {}
 

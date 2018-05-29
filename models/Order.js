@@ -56,7 +56,6 @@ var Order = {
     getAllData: function(group, id, callback)
     {
 
-        var debounce = require('debounce');
         var self = this;
 
         this.get(group, id, function(order){
@@ -85,8 +84,8 @@ var Order = {
                                 });
                                
                             }else{
-                                debounced()
-                            } 
+                                callback(order);
+                            }
                             
                         });
 
