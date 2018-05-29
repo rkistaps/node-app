@@ -8,8 +8,7 @@ var Mail = require('./Mail');
 
 module.exports = {
 
-    listen: function()
-    {
+    listen: function () {
 
         this.listenMessages();
         this.listenOrders();
@@ -17,34 +16,34 @@ module.exports = {
     },
 
     // for chat messages
-    listenMessages: function(){
+    listenMessages: function () {
 
         MessagesRef = db.instance.ref(Message.path);
-        MessagesRef.on('child_added', function(group_snapshot, prevChildKey){ // new group is showing up
+        MessagesRef.on('child_added', function (group_snapshot, prevChildKey) { // new group is showing up
 
             var group_id = group_snapshot.key; // thats group_id
 
             MessageGroupRef = db.instance.ref(Message.path).child(group_id);
-            MessageGroupRef.on('child_added', function(order_snapshot, prevChildKey){ // new order in group
+            MessageGroupRef.on('child_added', function (order_snapshot, prevChildKey) { // new order in group
 
                 var order_id = order_snapshot.key; // thats order_id
                 MessageGroupOrderRef = db.instance.ref(Message.path).child(group_id).child(order_id);
-                MessageGroupOrderRef.on('child_added', function(message_snapshot, prevChildKey){ // new message in group_id/order_id
+                MessageGroupOrderRef.on('child_added', function (message_snapshot, prevChildKey) { // new message in group_id/order_id
 
                     var message = message_snapshot.val();
-                    if(!message.sentToChat){ // have i been sent ?
+                    if (!message.sentToChat) { // have i been sent ?
 
-                        message_snapshot.ref.update({sentToChat: true}); // register as sent
+                        message_snapshot.ref.update({ sentToChat: true }); // register as sent
 
                         var emit_sockets = [];
                         // sending to chat group sockets
-                        for(var i in App.chatSockets){
+                        for (var i in App.chatSockets) {
 
-                            var socket = App.chatSockets[i]; 
-                            if(socket.chatData && socket.chatData.group_id == group_id){ // thats my group
+                            var socket = App.chatSockets[i];
+                            if (socket.chatData && socket.chatData.group_id == group_id) { // thats my group
 
                                 emit_sockets.push(socket)
-                                User.get(message.createdBy, function(user_data){
+                                User.get(message.createdBy, function (user_data) {
 
                                     var key = functions.getKey(user_data);
                                     user = user_data[key];
@@ -83,60 +82,87 @@ module.exports = {
     },
 
     // for sending sos emails to 112
-    listenOrders: function()
-    {
+    listenOrders: function () {
 
         var self = this;
 
         OrderRef = db.instance.ref(Order.path);
-        OrderRef.on('child_added', function(childSnapshot, group_id) {
+        OrderRef.on('child_added', function (group_snapshot, prevChildKey) { // group added
 
-            var order = childSnapshot.val();
+            var group_id = group_snapshot.key; // thats group_id
 
-            if(/*1 || */(!order.sosSent && order.modeReason == 1)){ // SOS reason
-            
-                User.get(App.config.sos_user, function(user_data){
+            GroupOrderRef = db.instance.ref(Order.path).child(group_id);
+            GroupOrderRef.on('child_added', function (order_snapshot, prevChildKey) { // new order in group
 
-                    if(user_data){
+                var order_id = order_snapshot.key
+                var order = order_snapshot.val()
 
-                        var key = functions.getKey(user_data)
-                        var user = user_data[key]
-                        var from = App.config.mail.from
+                // add additional data
+                order.key = order_id // adding its key            
+                order.group_id = group_id; // adding its group 
 
-                        user.email = 'ktaube@datateks.lv' // testing
-                        
-                        var sosmail = self.createSOSMail(order, user_data) 
+                if (!order.sosSent && order.modeReason == 1) { // SOS reason 
 
-                        Mail.send(from, user.email, sosmail.subject, sosmail.content, function(sent, result){
+                    order_snapshot.ref.update({ sosSent: true }); // register as sent
 
-                            if(sent){
-                                App.log('SOS SENT: ' + JSON.stringify(result));
-                            }else{
-                                App.log('SOS NOT SENT: ' + JSON.stringify(result));
-                            }
+                    User.get(App.config.sos_user, function (sos_user_data) {
 
-                        })
+                        if (sos_user_data) {
 
-                    }
+                            var user_key = functions.getKey(sos_user_data)
+                            var sos_user = sos_user_data[user_key]
 
-                })
-             
-            }
+                            User.get(order.createdBy, function(user_data){
+
+                                var user_key = functions.getKey(user_data)
+                                var user = user_data[user_key]
+                                var from = App.config.mail.from
+
+                                sos_user.email = 'ktaube@datateks.lv' // testing
+
+                                var sosmail = self.createSOSMail(order, user)
+
+                                Mail.send(from, sos_user.email, sosmail.subject, sosmail.content, function (sent, result) {
+
+                                    if (sent) {
+                                        App.log('SOS SENT: ' + JSON.stringify(result));
+                                    } else {
+                                        App.log('SOS NOT SENT: ' + JSON.stringify(result));
+                                    }
+
+                                })
+
+                            })
+
+                        }
+
+                    })
+
+                }
+
+            });
 
         });
 
     },
 
-    createSOSMail: function(order, user){
+    createSOSMail: function (order, user) {
 
-        var subject = 'Jauns SOS'
-        var content = 'Jauns SOS'
-        
-        //content = App.config.web_app
+        var webApp = App.config.web_app
 
+        webUrl = webApp.protocol + '://' + webApp.host + (webApp.port ? ':' + webApp.port : '') + webApp.path
+        webUrl += 'order/' + order.group_id + '/' + order.key
 
-        return {subject: subject, content: content}
+        var date = new Date(order.dateTime * 1000);
+        var datetime = functions.getDateTime(date);
+
+        var subject = '[SASAP] ' + user.fullName
+        var content = 'SASAP lietotājs ' + user.fullName + '<br />'
+        content += 'Izsaukuma laiks: ' + datetime + '<br />'
+        content += 'Izsaukuma saite: <a href="' + webUrl + '">' + webUrl + '</a>'
+
+        return { subject: subject, content: content }
+
     }
-
 
 }

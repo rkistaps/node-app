@@ -13,24 +13,27 @@ var Message = {
         ref.once("value", function(snapshot) {
 
             var result = snapshot.val()
-            var length = Object.keys(result).length
-            var counter = 0
-
             var users = {}
+            if(result){
+                var length = Object.keys(result).length
+                var counter = 0
 
-            for(var i in result){
+                for(var i in result){
 
-                userRef = db.instance.ref(User.path + "/").child(result[i].createdBy);
-                userRef.once('value', function(user_snap){
+                    userRef = db.instance.ref(User.path + "/").child(result[i].createdBy);
+                    userRef.once('value', function(user_snap){
 
-                    users[user_snap.key] = user_snap.val();
+                        users[user_snap.key] = user_snap.val();
 
-                    if(++counter == length){ // this was last one
-                        callback({messages: result, users: users});
-                    }
+                        if(++counter == length){ // this was last one
+                            callback({messages: result, users: users});
+                        }
 
-                });
+                    });
 
+                }
+            }else{
+                callback({messages: result, users: users});    
             }
 
         });
