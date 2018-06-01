@@ -4,12 +4,12 @@ const striptags = require('striptags');
 
 module.exports = {
 
-    send: function(from, to, subject, text, callback){
+    send: function (from, to, subject, text, callback) {
 
-        let plain = text; 
-        plain.replace('<br />', "\n"); 
-        plain.replace('<br>', "\n"); 
-        plain = striptags(text); 
+        let plain = text;
+        plain.replace('<br />', "\n");
+        plain.replace('<br>', "\n");
+        plain = striptags(text);
 
         let mailOptions = {
             from: from,
@@ -25,7 +25,7 @@ module.exports = {
 
             if (error) {
                 callback(false, error);
-            }else{
+            } else {
                 callback(true, info);
             }
 

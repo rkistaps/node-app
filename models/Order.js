@@ -1,99 +1,105 @@
 const db = require('./../components/DB')
 const User = require('./User')
 const Mode = require('./Mode')
+const Group = require('./Group')
 const functions = require('./../functions')
 
 var Order = {
 
     path: 'orders',
 
-    get: function(group, id, callback)
-    {
+    get: function (group, id, callback) {
 
         var ref = db.instance.ref(this.path + "/" + group + "/" + id);
 
-        ref.once("value", function(snapshot) {
-            if(typeof callback == 'function'){
+        ref.once("value", function (snapshot) {
+            if (typeof callback == 'function') {
                 callback(snapshot.val());
             }
         });
 
     },
 
-    getOrders: function(group_id, callback)
-    {
+    getOrders: function (group_id, callback) {
 
         var ref = db.instance.ref(this.path + "/" + group_id);
 
-        ref.once("value", function(snapshot) {
-            if(typeof callback == 'function'){
+        ref.once("value", function (snapshot) {
+            if (typeof callback == 'function') {
                 callback(snapshot.val());
             }
         });
 
     },
 
-    getSOS: function(group_id, callback)
-    {
+    getSOS: function (group_id, callback) {
 
         var ref = db.instance.ref(this.path + "/" + group_id);
 
-        ref.orderByChild("modeReason").equalTo(1).once("value", function(snapshot) {
-            if(typeof callback == 'function'){
+        ref.orderByChild("modeReason").equalTo(1).once("value", function (snapshot) {
+            if (typeof callback == 'function') {
                 callback(snapshot.val());
             }
         });
 
     },
 
-    setDone: function(group_id, order_id)
-    {
+    setDone: function (group_id, order_id) {
 
-        db.instance.ref(this.path + "/" + group_id + "/" + order_id).update({orderStatus: 'done'});
+        db.instance.ref(this.path + "/" + group_id + "/" + order_id).update({
+            orderStatus: 'done'
+        });
 
     },
 
-    getAllData: function(group, id, callback)
-    {
+    getAllData: function (group, id, callback) {
 
         var self = this;
 
-        this.get(group, id, function(order){
+        this.get(group, id, function (order) {
 
-            Mode.getReason(order.modeReason, function(result){
+            if (order) {
+                Mode.getReason(order.modeReason, function (result) {
 
-                order.reason = result
-                Mode.getStatus(order.modeStatus, function(result){
+                    order.reason = result
+                    Mode.getStatus(order.modeStatus, function (result) {
 
-                    order.status = result
-                    Mode.getType(order.modeType, function(result){
+                        order.status = result
+                        Mode.getType(order.modeType, function (result) {
 
-                        order.type = result
+                            order.type = result
+                            User.get(order.createdBy, function (result) {
 
-                        User.get(order.createdBy, function(result){
+                                order.user = result
+                                order.notifications = order.notifications ? order.notifications : {}
+                                user_ids = Object.keys(order.notifications)
 
-                            order.user = result
+                                Group.get(group, function (data) {
 
-                            if(order.notifications){
+                                    order.groupData = data
+                                    for (var i in data) {
+                                        user_ids.push(i)
+                                    }
 
-                                User.getByIds(Object.keys(order.notifications), function(users){
+                                    User.getByIds(user_ids, function (users) {
 
-                                    order.notification_users = users
-                                    callback(order);
+                                        order.users = users
+                                        callback(order);
 
-                                });
-                               
-                            }else{
-                                callback(order);
-                            }
-                            
-                        });
+                                    })
+
+                                })
+
+                            })
+
+                        })
 
                     })
 
                 })
-
-            });
+            } else {
+                callback({})
+            }
 
         });
 

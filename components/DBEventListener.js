@@ -33,7 +33,9 @@ module.exports = {
                     var message = message_snapshot.val();
                     if (!message.sentToChat) { // have i been sent ?
 
-                        message_snapshot.ref.update({ sentToChat: true }); // register as sent
+                        message_snapshot.ref.update({
+                            sentToChat: true
+                        }); // register as sent
 
                         var emit_sockets = [];
                         // sending to chat group sockets
@@ -56,6 +58,9 @@ module.exports = {
                                         user_id: key,
                                         user: user.fullName,
                                         message: message.msgText,
+                                        mediaType: message.mediaType,
+                                        key: message.key,
+                                        downloadUrl: message.downloadURL,
                                         time: message.dateTime
                                     };
 
@@ -84,7 +89,7 @@ module.exports = {
     // for sending sos emails to 112
     listenOrders: function () {
 
-        var self = this;
+        const self = this
 
         OrderRef = db.instance.ref(Order.path);
         OrderRef.on('child_added', function (group_snapshot, prevChildKey) { // group added
@@ -103,34 +108,41 @@ module.exports = {
 
                 if (!order.sosSent && order.modeReason == 1) { // SOS reason 
 
-                    order_snapshot.ref.update({ sosSent: true }); // register as sent
+                    order_snapshot.ref.update({
+                        sosSent: true
+                    }); // register as sent
 
-                    User.get(App.config.sos_user, function (sos_user_data) {
+                    User.get(App.config.sos_user, function (sos_user_data, uid) { // get sos user
 
                         if (sos_user_data) {
 
                             var user_key = functions.getKey(sos_user_data)
                             var sos_user = sos_user_data[user_key]
 
-                            User.get(order.createdBy, function(user_data){
+                            User.get(order.createdBy, function (user_data) { // get order author
 
-                                var user_key = functions.getKey(user_data)
-                                var user = user_data[user_key]
-                                var from = App.config.mail.from
+                                if (user_data) {
+                                    var user_key = functions.getKey(user_data)
+                                    var user = user_data[user_key]
+                                    var from = App.config.mail.from
 
-                                sos_user.email = 'ktaube@datateks.lv' // testing
+                                    sos_user.email = 'ktaube@datateks.lv' // testing
+                                    sos_user.email = 'ak@seniorasap.com' // testing
 
-                                var sosmail = self.createSOSMail(order, user)
+                                    var sosmail = self.createSOSMail(order, user)
 
-                                Mail.send(from, sos_user.email, sosmail.subject, sosmail.content, function (sent, result) {
+                                    Mail.send(from, sos_user.email, sosmail.subject, sosmail.content, function (sent, result) {
 
-                                    if (sent) {
-                                        App.log('SOS SENT: ' + JSON.stringify(result));
-                                    } else {
-                                        App.log('SOS NOT SENT: ' + JSON.stringify(result));
-                                    }
+                                        if (sent) {
+                                            App.log('SOS SENT: ' + JSON.stringify(result));
+                                        } else {
+                                            App.log('SOS NOT SENT: ' + JSON.stringify(result));
+                                        }
 
-                                })
+                                    })
+                                } else {
+                                    App.log('No user data for sos user: ' + App.config.sos_user)
+                                }
 
                             })
 
@@ -161,7 +173,10 @@ module.exports = {
         content += 'Izsaukuma laiks: ' + datetime + '<br />'
         content += 'Izsaukuma saite: <a href="' + webUrl + '">' + webUrl + '</a>'
 
-        return { subject: subject, content: content }
+        return {
+            subject: subject,
+            content: content
+        }
 
     }
 

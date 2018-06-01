@@ -1,46 +1,51 @@
-var db = require('./../components/DB');
-var User = require('./User');
+const db = require('./../components/DB')
+const firebase = require('./../components/FireBase')
+const User = require('./User')
 
 var Message = {
 
     path: 'msgs',
 
-    getByGroupAndOrder: function(group, order, callback)
-    {
+    getByGroupAndOrder: function (group, order, callback) {
 
         var ref = db.instance.ref(this.path + "/" + group + "/" + order);
 
-        ref.once("value", function(snapshot) {
+        ref.once("value", function (snapshot) {
 
-            var result = snapshot.val()
+            var messages = snapshot.val()
             var users = {}
-            if(result){
-                var length = Object.keys(result).length
-                var counter = 0
+            if (messages) {
 
-                for(var i in result){
-
-                    userRef = db.instance.ref(User.path + "/").child(result[i].createdBy);
-                    userRef.once('value', function(user_snap){
-
-                        users[user_snap.key] = user_snap.val();
-
-                        if(++counter == length){ // this was last one
-                            callback({messages: result, users: users});
-                        }
-
-                    });
-
+                var user_ids = []
+                for (var i in messages) {
+                    user_ids[user_ids.length] = messages[i].createdBy
                 }
-            }else{
-                callback({messages: result, users: users});    
+
+                User.getByIds(user_ids, function (users) {
+
+                    callback({
+                        messages: messages,
+                        users: users,
+                        // media: media
+                    })
+
+                    // this doesnt work at all
+                    // firebase.getMediaFromMessages(group, order, messages, function (media) {})
+
+                })
+
+            } else {
+                callback({
+                    messages: messages,
+                    users: users
+                });
             }
 
         });
 
     },
 
-    loadMessageUsers: function(messages, callback){
+    loadMessageUsers: function (messages, callback) {
 
     }
 

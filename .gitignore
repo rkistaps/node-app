@@ -1,6 +1,7 @@
 /logs
 /config.js
 /firebase-credentials.json
+/sasap-firebase.json
 /app.pid
 /node_modules
 /.vscode 
